@@ -1,0 +1,23 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./package/dist",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "dom", "ESNext"],
+    "types": ["node", "web3"],
+    "skipLibCheck": true,
+    "noImplicitAny": false
+  },
+  "include": ["package/**/*"],
+  "exclude": [
+    "node_modules/*",
+    "package/LockRewards.s.sol/*",
+    "package/LockRewards.t.sol/*"
+  ]
+}

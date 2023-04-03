@@ -1,0 +1,38 @@
+{
+  "name": "vl-psdn",
+  "version": "1.0.0",
+  "description": "This contract is a contribution to the NewOrder DAO rewards distribution hub.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "package:generate": "npx typechain --target=ethers-v5 ./out/**/*.json --out-dir ./package",
+    "package:build": "npx tsc",
+    "package:clean": "rm -rf ./package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h2odata/vl-psdn.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/h2odata/vl-psdn/issues"
+  },
+  "homepage": "https://github.com/h2odata/vl-psdn#readme",
+  "devDependencies": {
+    "@typechain/ethers-v5": "^10.2.0",
+    "@types/node": "^18.11.18",
+    "@types/web3": "^1.2.2",
+    "typechain": "^8.1.1",
+    "typescript": "^5.0.2"
+  },
+  "dependencies": {
+    "bn.js": "^5.2.1",
+    "web3-core": "^1.8.2",
+    "web3-eth-accounts": "^1.8.2",
+    "web3-eth-contract": "^1.8.2"
+  }
+}
