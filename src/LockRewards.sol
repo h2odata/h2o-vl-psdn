@@ -653,8 +653,9 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards)
     {
         rewards = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length;) {
-            rewards[i] = accounts[owner].rewards[rewardTokens[i]];
+        for (uint256 i = 0; i < accounts[owner].rewardTokens.length;) {
+            address addr = accounts[owner].rewardTokens[i];
+            rewards[i] = accounts[owner].rewards[addr];
 
             unchecked {
                 ++i;
