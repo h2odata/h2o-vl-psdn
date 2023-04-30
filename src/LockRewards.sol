@@ -613,9 +613,10 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
         if (accounts[msg.sender].lockEpochs > 0 && enforceTime) revert FundsInLockPeriod(accounts[msg.sender].balance);
 
-        IERC20(lockToken).safeTransfer(msg.sender, amount);
         totalAssets -= amount;
         accounts[msg.sender].balance -= amount;
+        IERC20(lockToken).safeTransfer(msg.sender, amount);
+
         emit Withdrawn(msg.sender, amount);
     }
 
