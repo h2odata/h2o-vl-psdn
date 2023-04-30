@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 
 interface ILockRewards {
@@ -6,16 +6,30 @@ interface ILockRewards {
     function balanceOf(address owner) external view returns (uint256);
     function balanceOfInEpoch(address owner, uint256 epochId) external view returns (uint256);
     function totalLocked() external view returns (uint256);
-    function getCurrentEpoch() external view returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
-    function getNextEpoch() external view returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
-    function getEpoch(uint256 epochId) external view returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
-    function getAccount(address owner) external view returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards);
-    function updateAccount() external returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards);
+    function getCurrentEpoch()
+        external
+        view
+        returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
+    function getNextEpoch()
+        external
+        view
+        returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
+    function getEpoch(uint256 epochId)
+        external
+        view
+        returns (uint256 start, uint256 finish, uint256 locked, uint256[] memory rewards, bool isSet);
+    function getAccount(address owner)
+        external
+        view
+        returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards);
+    function updateAccount()
+        external
+        returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards);
     function deposit(uint256 amount) external;
     function redeposit(uint256 amount) external;
     function withdraw(uint256 amount) external;
-    function claimReward() external returns(uint256[] memory);
-    function exit() external returns(uint256[] memory );
+    function claimReward() external returns (uint256[] memory);
+    function exit() external returns (uint256[] memory);
     function setNextEpoch(uint256[] calldata values) external;
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external;
     function changeRecoverWhitelist(address tokenAddress, bool flag) external;
@@ -41,6 +55,7 @@ interface ILockRewards {
     // Errors
     error InsufficientAmount();
     error InsufficientBalance();
+    error InsufficientDeposit();
     error IncorrectLockDuration();
     error RewardTokenAlreadyExists(address token);
     error RewardTokenCannotBeLockToken(address token);
@@ -54,7 +69,7 @@ interface ILockRewards {
     error CannotWhitelistLockedToken(address lockedToken);
     error EpochMaxReached(uint256 maxEpochs);
     error EpochStartInvalid(uint256 epochStart, uint256 now);
-    
+
     // Structs
     struct Account {
         uint256 balance;
@@ -72,7 +87,7 @@ interface ILockRewards {
         uint256 totalLocked;
         address[] tokens;
         uint256[] rewards;
-        bool    isSet;
+        bool isSet;
     }
 
     struct RewardToken {

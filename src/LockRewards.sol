@@ -219,6 +219,10 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      *  @param amount: the amount of lock tokens to deposit
      */
     function redeposit(uint256 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
+        if (accounts[msg.sender].balance == 0) {
+            revert InsufficientDeposit();
+        }
+
         _deposit(amount, 0);
     }
 
