@@ -472,15 +472,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      */
     function _removeReward(uint256 index) internal {
         address addr = rewardTokens[index];
-
-        for (uint256 i = index; i < rewardTokens.length - 1;) {
-            rewardTokens[i] = rewardTokens[i + 1];
-
-            unchecked {
-                ++i;
-            }
-        }
-
+        rewardTokens[index] = rewardTokens[rewardTokens.length - 1];
         rewardTokens.pop();
 
         emit RemovedRewardToken(addr);
