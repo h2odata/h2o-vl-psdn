@@ -552,6 +552,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         uint256 oldLockEpochs = accounts[msg.sender].lockEpochs;
         // Increase lockEpochs for user
         accounts[msg.sender].lockEpochs += lock;
+        accounts[msg.sender].lockStart = block.timestamp;
 
         // This is done to save gas in case of a relock
         // Also, emits a different event for deposit or relock
@@ -597,8 +598,10 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      */
     function _withdraw(uint256 amount) internal {
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
-        if (accounts[msg.sender].lockEpochs > 0 && enforceTime) revert FundsInLockPeriod(accounts[msg.sender].balance);
-
+        if (
+            accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 > block.timestamp
+                && accounts[msg.sender].lockEpochs > 0 && enforceTime
+        ) revert FundsInLockPeriod(accounts[msg.sender].balance);
         totalAssets -= amount;
         accounts[msg.sender].balance -= amount;
         IERC20(lockToken).safeTransfer(msg.sender, amount);

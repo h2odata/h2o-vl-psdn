@@ -73,6 +73,7 @@ interface ILockRewards {
     // Structs
     struct Account {
         uint256 balance;
+        uint256 lockStart;
         uint256 lockEpochs;
         uint256 lastEpochPaid;
         mapping(address => uint256) rewards;

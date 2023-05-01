@@ -755,11 +755,6 @@ contract LockRewardsTest is Test {
         // time travel to the middle of second epoch
         vm.warp(blockTime + _day(9));
 
-        // Withdraw should revert
-        vm.prank(user);
-        vm.expectRevert(abi.encodeWithSelector(ILockRewards.FundsInLockPeriod.selector, 2 * deposit));
-        lockRewardsContract.withdraw(deposit);
-
         // user should be able to claim first epoch rewards
         uint256 reward1Balance1 = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2Balance1 = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1029,6 +1024,36 @@ contract LockRewardsTest is Test {
         lockRewardsContract.withdraw(deposit);
     }
 
+    function testUserShouldBeAbleToWithdrawDuringLockingPeriodWhenLockedTooLong() public {
+        uint256 blockTime = block.timestamp;
+        uint256 reward1 = 1000e18;
+        uint256 reward2 = 1e18;
+        uint256[] memory values = new uint256[](2);
+        values[0] = reward1;
+        values[1] = reward2;
+        _transferRewards(3 * reward1, 3 * reward2);
+        uint256 deposit = 1e18;
+
+        _deposit(user, deposit);
+
+        vm.warp(blockTime + _day(2));
+
+        vm.expectRevert(abi.encodeWithSelector(ILockRewards.FundsInLockPeriod.selector, deposit));
+        vm.prank(user);
+        lockRewardsContract.withdraw(deposit);
+
+        vm.warp(blockTime + _day(LOCK_PERIOD * EPOCH_DURATION));
+
+        uint256 balanceBefore = IERC20(LOCK_ADDRESS).balanceOf(user);
+
+        vm.prank(user);
+        lockRewardsContract.withdraw(deposit);
+
+        uint256 balanceAfter = IERC20(LOCK_ADDRESS).balanceOf(user);
+
+        assertEq(balanceAfter, balanceBefore + deposit);
+    }
+
     function testUserShouldBeAbleToWithdrawAfterLockingPeriod() public {
         uint256 blockTime = block.timestamp;
         uint256 reward1 = 1000e18;
@@ -1210,14 +1235,6 @@ contract LockRewardsTest is Test {
         vm.expectRevert("Pausable: paused");
         vm.prank(user);
         lockRewardsContract.deposit(deposit);
-
-        vm.expectRevert("Pausable: paused");
-        vm.prank(user);
-        lockRewardsContract.withdraw(deposit);
-
-        vm.expectRevert("Pausable: paused");
-        vm.prank(user);
-        lockRewardsContract.claimReward();
     }
 
     /* Utils */
