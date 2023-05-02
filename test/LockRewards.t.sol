@@ -1235,6 +1235,15 @@ contract LockRewardsTest is Test {
         vm.expectRevert("Pausable: paused");
         vm.prank(user);
         lockRewardsContract.deposit(deposit);
+        vm.expectRevert("Pausable: paused");
+        vm.prank(user);
+        lockRewardsContract.withdraw(deposit);
+        vm.expectRevert("Pausable: paused");
+        vm.prank(user);
+        lockRewardsContract.claimReward();
+        vm.expectRevert("Pausable: paused");
+        vm.prank(user);
+        lockRewardsContract.exit();
     }
 
     /* Utils */

@@ -237,7 +237,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     /**
      *  @notice User can receive its claimable rewards
      */
-    function claimReward() external nonReentrant updateEpoch updateReward(msg.sender) returns (uint256[] memory) {
+    function claimReward()
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256[] memory)
+    {
         return _claim();
     }
 
@@ -245,7 +252,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      *  @notice User withdraw all its funds and receive all available rewards
      *  @dev If user funds it's still locked, all transaction will revert
      */
-    function exit() external nonReentrant updateEpoch updateReward(msg.sender) returns (uint256[] memory) {
+    function exit()
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256[] memory)
+    {
         _withdraw(accounts[msg.sender].balance);
         return _claim();
     }
@@ -255,7 +269,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      * @dev It's available only when user funds are locked for more than twice default lock period, only possible in case
      * where protocol haven't set upcoming epochs for extended period of time.
      */
-    function emergencyExit() external nonReentrant updateEpoch updateReward(msg.sender) returns (uint256[] memory) {
+    function emergencyExit()
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256[] memory)
+    {
         _emergencyWithdraw(accounts[msg.sender].balance);
         return _claim();
     }
