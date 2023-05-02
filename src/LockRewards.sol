@@ -250,6 +250,16 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         return _claim();
     }
 
+    /**
+     * @notice User withdraw all its funds and receive all available rewards and remove all upcoming rewards
+     * @dev It's available only when user funds are locked for more than twice default lock period, only possible in case
+     * where protocol haven't set upcoming epochs for extended period of time.
+     */
+    function emergencyExit() external nonReentrant updateEpoch updateReward(msg.sender) returns (uint256[] memory) {
+        _emergencyWithdraw(accounts[msg.sender].balance);
+        return _claim();
+    }
+
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     /**
@@ -590,14 +600,58 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      */
     function _withdraw(uint256 amount) internal {
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
-        if (
-            accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 > block.timestamp
-                && accounts[msg.sender].lockEpochs > 0 && enforceTime
-        ) revert FundsInLockPeriod(accounts[msg.sender].balance);
+        if (accounts[msg.sender].lockEpochs > 0 && enforceTime) revert FundsInLockPeriod(accounts[msg.sender].balance);
         totalAssets -= amount;
         accounts[msg.sender].balance -= amount;
         IERC20(lockToken).safeTransfer(msg.sender, amount);
 
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    /**
+     *  @notice Implements internal emergency withdraw logic
+     *  @dev The emergency withdraw is always done in name
+     * of caller for caller, it removes all further rewards.
+     *  @param amount: amount of tokens to withdraw
+     */
+
+    function _emergencyWithdraw(uint256 amount) internal {
+        if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
+        if (accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 * 2 < block.timestamp) {
+            revert FundsInLockPeriod(accounts[msg.sender].balance);
+        }
+
+        uint256 current = currentEpoch;
+        uint256 lockEpochs = accounts[msg.sender].lockEpochs;
+        uint256 lastEpochPaid = accounts[msg.sender].lastEpochPaid;
+
+        // Solve edge case for first epoch
+        // since epochs starts on value 1
+        if (lastEpochPaid == 0) {
+            accounts[msg.sender].lastEpochPaid = 1;
+            ++lastEpochPaid;
+        }
+
+        uint256 limit = lastEpochPaid + lockEpochs;
+        if (limit > current) {
+            limit = current;
+        }
+
+        for (uint256 i = lastEpochPaid; i < limit;) {
+            epochs[i].totalLocked -= epochs[i].balanceLocked[msg.sender];
+            epochs[i].balanceLocked[msg.sender] = 0;
+            unchecked {
+                ++i;
+            }
+        }
+
+        accounts[msg.sender].lastEpochPaid = current;
+        accounts[msg.sender].lockEpochs = 0;
+
+        totalAssets -= amount;
+        accounts[msg.sender].balance -= amount;
+
+        IERC20(lockToken).safeTransfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount);
     }
 
