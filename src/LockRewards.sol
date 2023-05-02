@@ -249,6 +249,21 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
+     * @notice User can receive its claimable reward
+     * @param reward: address of reward token to be claimed
+     */
+    function claimReward(address reward)
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256)
+    {
+        return _claim(reward);
+    }
+
+    /**
      *  @notice User withdraw all its funds and receive all available rewards
      *  @dev If user funds it's still locked, all transaction will revert
      */
@@ -677,11 +692,29 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
+     *  @notice Implements internal claim reward logic
+     *  @dev The claim reward is always done in name
+     * of caller for caller
+     *  @param addr: address of token for which reward will be claimed
+     *  @return reward token amount claimed
+     */
+    function _claim(address addr) internal returns (uint256 reward) {
+        uint256 reward = accounts[msg.sender].rewards[addr];
+        if (reward > 0) {
+            accounts[msg.sender].rewards[addr] = 0;
+            IERC20(addr).safeTransfer(msg.sender, reward);
+            emit RewardPaid(msg.sender, addr, reward);
+        }
+
+        return reward;
+    }
+    /**
      *  @notice Implements internal claim rewards logic
      *  @dev The claim is always done in name
      * of caller for caller
      *  @return rewards of rewards transfer in token 1
      */
+
     function _claim() internal returns (uint256[] memory rewards) {
         rewards = new uint256[](accounts[msg.sender].rewardTokens.length);
 
@@ -706,7 +739,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
 
     /**
      *  @notice Implements internal getAccount logic
-     *  @param owner: address to check information§
+     *  @param owner: address to check informations
      */
     function _getAccount(address owner)
         internal
