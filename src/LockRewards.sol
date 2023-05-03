@@ -653,7 +653,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
 
     function _emergencyWithdraw(uint256 amount) internal {
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
-        if (accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 * 2 < block.timestamp) {
+        if (accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 * 2 > block.timestamp) {
             revert FundsInLockPeriod(accounts[msg.sender].balance);
         }
 
@@ -699,7 +699,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      *  @return reward token amount claimed
      */
     function _claim(address addr) internal returns (uint256 reward) {
-        uint256 reward = accounts[msg.sender].rewards[addr];
+        reward = accounts[msg.sender].rewards[addr];
         if (reward > 0) {
             accounts[msg.sender].rewards[addr] = 0;
             IERC20(addr).safeTransfer(msg.sender, reward);
