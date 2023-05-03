@@ -154,6 +154,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
+     *  @notice Show balance locked for called
+     *  @param epochId: number of epoch
+     */
+    function getEpochBalanceLocked(uint256 epochId) external view returns (uint256 balanceLocked) {
+        return _getEpochBalanceLocked(epochId);
+    }
+
+    /**
      *  @notice Show information for an account
      *  @dev LastEpochPaid tell when was the last epoch in each
      * this accounts was updated, which means receive rewards.
@@ -669,9 +677,6 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         }
 
         uint256 limit = lastEpochPaid + lockEpochs;
-        if (limit > current) {
-            limit = current;
-        }
 
         for (uint256 i = lastEpochPaid; i < limit;) {
             epochs[i].totalLocked -= epochs[i].balanceLocked[msg.sender];
@@ -681,7 +686,6 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
             }
         }
 
-        accounts[msg.sender].lastEpochPaid = current;
         accounts[msg.sender].lockEpochs = 0;
 
         totalAssets -= amount;
@@ -775,6 +779,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
             epochs[epochId].rewards,
             epochs[epochId].isSet
         );
+    }
+
+    /**
+     *  @notice Implements internal getEpochBalanceLocked logic
+     *  @param epochId: the number of the epoch
+     */
+    function _getEpochBalanceLocked(uint256 epochId) internal view returns (uint256 balanceLocked) {
+        return (epochs[epochId].balanceLocked[msg.sender]);
     }
 
     /* ========== MODIFIERS ========== */

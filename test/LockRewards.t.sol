@@ -127,6 +127,35 @@ contract LockRewardsTest is Test {
         assertEq(rewards[1], 0);
     }
 
+    function testGetEpochBalanceLockShouldReturnCallerBalanceLocked() public {
+        uint256 reward1 = 1000e18;
+        uint256 reward2 = 1e18;
+        uint256[] memory values = new uint256[](2);
+        values[0] = reward1;
+        values[1] = reward2;
+        uint256 deposit = 1e18;
+        _transferRewards(reward1, reward2);
+        lockRewardsContract.setLockDuration(2);
+
+        _deposit(user, deposit);
+
+        vm.startPrank(user);
+        uint256 user1epoch1BalanceLocked = lockRewardsContract.getEpochBalanceLocked(1);
+        uint256 user1epoch2BalanceLocked = lockRewardsContract.getEpochBalanceLocked(2);
+        vm.stopPrank();
+
+        assertEq(user1epoch1BalanceLocked, deposit);
+        assertEq(user1epoch2BalanceLocked, deposit);
+
+        vm.startPrank(user2);
+        uint256 user2epoch1BalanceLocked = lockRewardsContract.getEpochBalanceLocked(1);
+        uint256 user2epoch2BalanceLocked = lockRewardsContract.getEpochBalanceLocked(2);
+        vm.stopPrank();
+
+        assertEq(user2epoch1BalanceLocked, 0);
+        assertEq(user2epoch2BalanceLocked, 0);
+    }
+
     function testGetEpochShouldReturnInformationAboutSpecificEpoch() public {
         uint256 reward1 = 1000e18;
         uint256 reward2 = 1e18;
@@ -613,20 +642,22 @@ contract LockRewardsTest is Test {
     function testLockingShouldUpdateAccountBalanceInfo() public {
         uint256 deposit = 1e18;
 
-        (,,uint256 totalLocked,) = lockRewardsContract.epochs(1);
+        vm.prank(user);
+        uint256 balanceLocked = lockRewardsContract.getEpochBalanceLocked(1);
         uint256 balance = IERC20(LOCK_ADDRESS).balanceOf(user);
         uint256 contractBalance = lockRewardsContract.totalAssets();
         (uint256 lockBalance, uint256 lock,,) = lockRewardsContract.getAccount(user);
         _deposit(user, deposit);
 
-        (,,uint256 totalAfterLocked,) = lockRewardsContract.epochs(1);
+        vm.prank(user);
+        uint256 balanceLockedAfter = lockRewardsContract.getEpochBalanceLocked(1);
         uint256 balanceAfter = IERC20(LOCK_ADDRESS).balanceOf(user);
         uint256 contractBalanceAfter = lockRewardsContract.totalAssets();
         (uint256 lockBalanceAfterDeposit, uint256 afterLock,,) = lockRewardsContract.getAccount(user);
 
         uint256 reward1Balance = IERC20(REWARD1_ADDRESS).balanceOf(user);
 
-        assertEq(totalAfterLocked, totalLocked + deposit);
+        assertEq(balanceLockedAfter, balanceLocked + deposit);
         assertEq(balanceAfter, balance - deposit);
         assertEq(lockBalanceAfterDeposit, lockBalance + deposit);
         assertEq(contractBalanceAfter, contractBalance + deposit);
@@ -959,7 +990,7 @@ contract LockRewardsTest is Test {
         assertEq(reward1ClaimedBalance, reward1Balance + reward1 * 3);
         assertEq(reward2ClaimedBalance, reward2Balance + reward2 * 3);
 
-        (,,,uint256[] memory rewards) = lockRewardsContract.getAccount(user);
+        (,,, uint256[] memory rewards) = lockRewardsContract.getAccount(user);
         assertEq(rewards[0], 0);
         assertEq(rewards[1], 0);
     }
@@ -1258,55 +1289,60 @@ contract LockRewardsTest is Test {
     }
 
     /* Emergency Exit Test */
-     function testUserShouldBeAbleToWithdrawDuringLockingPeriodWhenLockedTooLong() public {
-         uint256 blockTime = block.timestamp;
-         uint256 reward1 = 1000e18;
-         uint256 reward2 = 1e18;
-         uint256[] memory values = new uint256[](2);
-         values[0] = reward1;
-         values[1] = reward2;
-         _transferRewards(3 * reward1, 3 * reward2);
-         uint256 deposit = 1e18;
-         lockRewardsContract.setLockDuration(2);
+    function testUserShouldBeAbleToWithdrawDuringLockingPeriodWhenLockedTooLong() public {
+        uint256 blockTime = block.timestamp;
+        uint256 reward1 = 1000e18;
+        uint256 reward2 = 1e18;
+        uint256[] memory values = new uint256[](2);
+        values[0] = reward1;
+        values[1] = reward2;
+        _transferRewards(3 * reward1, 3 * reward2);
+        uint256 deposit = 1e18;
+        lockRewardsContract.setLockDuration(7);
 
-         _deposit(user, deposit);
-         lockRewardsContract.setNextEpoch(values);
+        _deposit(user, deposit);
 
-         vm.warp(blockTime + _day(7));
+        lockRewardsContract.setNextEpoch(values);
 
-         vm.expectRevert(abi.encodeWithSelector(ILockRewards.FundsInLockPeriod.selector, deposit));
-         vm.prank(user);
-         lockRewardsContract.emergencyExit();
+        vm.warp(blockTime + _day(7));
 
-         // Move to more than twice as long as should locking period be
-         vm.warp(blockTime + _day(2 * 2 * EPOCH_DURATION * LOCK_PERIOD + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILockRewards.FundsInLockPeriod.selector, deposit));
+        vm.prank(user);
+        lockRewardsContract.emergencyExit();
 
-         uint256 contractBalance = lockRewardsContract.totalLocked();
-         uint256 balance = IERC20(LOCK_ADDRESS).balanceOf(user);
+        // Move to more than twice as long as should locking period be
+        vm.warp(blockTime + _day(2 * 7 * EPOCH_DURATION + 1));
 
-         vm.prank(user);
-         lockRewardsContract.emergencyExit();
+        uint256 contractBalance = lockRewardsContract.totalLocked();
+        uint256 balance = IERC20(LOCK_ADDRESS).balanceOf(user);
 
-         uint256 exitContractBalance = lockRewardsContract.totalLocked();
-         uint256 exitBalance = IERC20(LOCK_ADDRESS).balanceOf(user);
-         uint256 exitReward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
+        vm.prank(user);
+        lockRewardsContract.emergencyExit();
 
-         // User should get rewards for previous epochs
-         // Note: REWARD1 is also deposit
-         assertEq(exitBalance, balance + deposit + reward1);
-         assertEq(exitReward2Balance, reward2);
-         assertEq(exitContractBalance, contractBalance - deposit);
+        vm.prank(user);
+        uint256 exitBalanceLocked = lockRewardsContract.getEpochBalanceLocked(2);
+        uint256 exitContractBalance = lockRewardsContract.totalLocked();
+        uint256 exitBalance = IERC20(LOCK_ADDRESS).balanceOf(user);
+        uint256 exitReward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
-         uint256 currentEpoch = lockRewardsContract.currentEpoch();
-         (uint256 exitLockedBalance, uint256 exitLockEpochs, uint256 exitLastEpochPaid, uint256[] memory exitRewards) = lockRewardsContract.getAccount(user);
+        // User should get rewards for previous epochs
+        // Note: REWARD1 is also deposit
+        assertEq(exitBalance, balance + deposit + reward1);
+        assertEq(exitReward2Balance, reward2);
+        assertEq(exitContractBalance, contractBalance - deposit);
 
-         // User should not get rewards for upcoming epochs
-         assertEq(exitLockedBalance, 0);
-         assertEq(exitLockEpochs, 0);
-         assertEq(exitLastEpochPaid, currentEpoch);
-         assertEq(exitRewards[0], 0);
-         assertEq(exitRewards[1], 0);
-     }
+        uint256 currentEpoch = lockRewardsContract.currentEpoch();
+        (uint256 exitLockedBalance, uint256 exitLockEpochs, uint256 exitLastEpochPaid, uint256[] memory exitRewards) =
+            lockRewardsContract.getAccount(user);
+
+        // User should not get rewards for upcoming epochs
+        assertEq(exitBalanceLocked, 0);
+        assertEq(exitLockedBalance, 0);
+        assertEq(exitLockEpochs, 0);
+        assertEq(exitLastEpochPaid, currentEpoch);
+        assertEq(exitRewards[0], 0);
+        assertEq(exitRewards[1], 0);
+    }
 
     /* Integrated Tests */
     function testLockAndRelockInTheMiddleOfEpoch() public {
