@@ -154,6 +154,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
+     *  @notice Show balance locked for called
+     *  @param epochId: number of epoch
+     */
+    function getEpochBalanceLocked(uint256 epochId) external view returns (uint256 balanceLocked) {
+        return _getEpochBalanceLocked(epochId);
+    }
+
+    /**
      *  @notice Show information for an account
      *  @dev LastEpochPaid tell when was the last epoch in each
      * this accounts was updated, which means receive rewards.
@@ -219,6 +227,10 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      *  @param amount: the amount of lock tokens to deposit
      */
     function redeposit(uint256 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
+        if (accounts[msg.sender].balance == 0) {
+            revert InsufficientDeposit();
+        }
+
         _deposit(amount, 0);
     }
 
@@ -245,6 +257,21 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
+     * @notice User can receive its claimable reward
+     * @param reward: address of reward token to be claimed
+     */
+    function claimReward(address reward)
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256)
+    {
+        return _claim(reward);
+    }
+
+    /**
      *  @notice User withdraw all its funds and receive all available rewards
      *  @dev If user funds it's still locked, all transaction will revert
      */
@@ -257,6 +284,23 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         returns (uint256[] memory)
     {
         _withdraw(accounts[msg.sender].balance);
+        return _claim();
+    }
+
+    /**
+     * @notice User withdraw all its funds and receive all available rewards and remove all upcoming rewards
+     * @dev It's available only when user funds are locked for more than twice default lock period, only possible in case
+     * where protocol haven't set upcoming epochs for extended period of time.
+     */
+    function emergencyExit()
+        external
+        nonReentrant
+        whenNotPaused
+        updateEpoch
+        updateReward(msg.sender)
+        returns (uint256[] memory)
+    {
+        _emergencyWithdraw(accounts[msg.sender].balance);
         return _claim();
     }
 
@@ -482,15 +526,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      */
     function _removeReward(uint256 index) internal {
         address addr = rewardTokens[index];
-
-        for (uint256 i = index; i < rewardTokens.length - 1;) {
-            rewardTokens[i] = rewardTokens[i + 1];
-
-            unchecked {
-                ++i;
-            }
-        }
-
+        rewardTokens[index] = rewardTokens[rewardTokens.length - 1];
         rewardTokens.pop();
 
         emit RemovedRewardToken(addr);
@@ -562,6 +598,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         uint256 oldLockEpochs = accounts[msg.sender].lockEpochs;
         // Increase lockEpochs for user
         accounts[msg.sender].lockEpochs += lock;
+        accounts[msg.sender].lockStart = block.timestamp;
 
         // This is done to save gas in case of a relock
         // Also, emits a different event for deposit or relock
@@ -608,19 +645,80 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     function _withdraw(uint256 amount) internal {
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
         if (accounts[msg.sender].lockEpochs > 0 && enforceTime) revert FundsInLockPeriod(accounts[msg.sender].balance);
-
-        IERC20(lockToken).safeTransfer(msg.sender, amount);
         totalAssets -= amount;
         accounts[msg.sender].balance -= amount;
+        IERC20(lockToken).safeTransfer(msg.sender, amount);
+
         emit Withdrawn(msg.sender, amount);
     }
 
+    /**
+     *  @notice Implements internal emergency withdraw logic
+     *  @dev The emergency withdraw is always done in name
+     * of caller for caller, it removes all further rewards.
+     *  @param amount: amount of tokens to withdraw
+     */
+
+    function _emergencyWithdraw(uint256 amount) internal {
+        if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
+        if (accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 * 2 > block.timestamp) {
+            revert FundsInLockPeriod(accounts[msg.sender].balance);
+        }
+
+        uint256 current = currentEpoch;
+        uint256 lockEpochs = accounts[msg.sender].lockEpochs;
+        uint256 lastEpochPaid = accounts[msg.sender].lastEpochPaid;
+
+        // Solve edge case for first epoch
+        // since epochs starts on value 1
+        if (lastEpochPaid == 0) {
+            accounts[msg.sender].lastEpochPaid = 1;
+            ++lastEpochPaid;
+        }
+
+        uint256 limit = lastEpochPaid + lockEpochs;
+
+        for (uint256 i = lastEpochPaid; i < limit;) {
+            epochs[i].totalLocked -= epochs[i].balanceLocked[msg.sender];
+            epochs[i].balanceLocked[msg.sender] = 0;
+            unchecked {
+                ++i;
+            }
+        }
+
+        accounts[msg.sender].lockEpochs = 0;
+
+        totalAssets -= amount;
+        accounts[msg.sender].balance -= amount;
+
+        IERC20(lockToken).safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    /**
+     *  @notice Implements internal claim reward logic
+     *  @dev The claim reward is always done in name
+     * of caller for caller
+     *  @param addr: address of token for which reward will be claimed
+     *  @return reward token amount claimed
+     */
+    function _claim(address addr) internal returns (uint256 reward) {
+        reward = accounts[msg.sender].rewards[addr];
+        if (reward > 0) {
+            accounts[msg.sender].rewards[addr] = 0;
+            IERC20(addr).safeTransfer(msg.sender, reward);
+            emit RewardPaid(msg.sender, addr, reward);
+        }
+
+        return reward;
+    }
     /**
      *  @notice Implements internal claim rewards logic
      *  @dev The claim is always done in name
      * of caller for caller
      *  @return rewards of rewards transfer in token 1
      */
+
     function _claim() internal returns (uint256[] memory rewards) {
         rewards = new uint256[](accounts[msg.sender].rewardTokens.length);
 
@@ -645,7 +743,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
 
     /**
      *  @notice Implements internal getAccount logic
-     *  @param owner: address to check information§
+     *  @param owner: address to check informations
      */
     function _getAccount(address owner)
         internal
@@ -653,8 +751,9 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards)
     {
         rewards = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length;) {
-            rewards[i] = accounts[owner].rewards[rewardTokens[i]];
+        for (uint256 i = 0; i < accounts[owner].rewardTokens.length;) {
+            address addr = accounts[owner].rewardTokens[i];
+            rewards[i] = accounts[owner].rewards[addr];
 
             unchecked {
                 ++i;
@@ -680,6 +779,14 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
             epochs[epochId].rewards,
             epochs[epochId].isSet
         );
+    }
+
+    /**
+     *  @notice Implements internal getEpochBalanceLocked logic
+     *  @param epochId: the number of the epoch
+     */
+    function _getEpochBalanceLocked(uint256 epochId) internal view returns (uint256 balanceLocked) {
+        return (epochs[epochId].balanceLocked[msg.sender]);
     }
 
     /* ========== MODIFIERS ========== */
