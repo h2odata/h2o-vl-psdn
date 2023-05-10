@@ -363,7 +363,7 @@ contract LockRewardsTest is Test {
         uint256 reward3Balance = IERC20(REWARD3_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -411,7 +411,7 @@ contract LockRewardsTest is Test {
         uint256 reward3Balance = IERC20(REWARD3_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -472,7 +472,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -514,7 +514,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -723,7 +723,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -810,7 +810,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance1 = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         assertEq(IERC20(REWARD1_ADDRESS).balanceOf(user) - reward1, reward1Balance1);
         assertEq(IERC20(REWARD2_ADDRESS).balanceOf(user) - reward2, reward2Balance1);
@@ -833,7 +833,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance2 = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         assertEq(IERC20(REWARD1_ADDRESS).balanceOf(user) - reward1, reward1Balance2);
         assertEq(IERC20(REWARD2_ADDRESS).balanceOf(user) - reward2, reward2Balance2);
@@ -861,7 +861,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -891,7 +891,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -929,7 +929,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -945,7 +945,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance2 = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance2 = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance2 = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -982,7 +982,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1017,7 +1017,7 @@ contract LockRewardsTest is Test {
         uint256 userReward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 userReward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 userReward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1029,7 +1029,7 @@ contract LockRewardsTest is Test {
         uint256 user2Reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user2);
 
         vm.prank(user2);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 user2Reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user2);
         uint256 user2Reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user2);
@@ -1166,7 +1166,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1203,7 +1203,7 @@ contract LockRewardsTest is Test {
         uint256 reward2Balance = IERC20(REWARD2_ADDRESS).balanceOf(user);
 
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1213,7 +1213,7 @@ contract LockRewardsTest is Test {
 
         vm.warp(blockTime + _day(1));
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
 
         uint256 reward1ClaimedAgainBalance = IERC20(REWARD1_ADDRESS).balanceOf(user);
         uint256 reward2ClaimedAgainBalance = IERC20(REWARD2_ADDRESS).balanceOf(user);
@@ -1442,7 +1442,7 @@ contract LockRewardsTest is Test {
         lockRewardsContract.withdraw(deposit);
         vm.expectRevert("Pausable: paused");
         vm.prank(user);
-        lockRewardsContract.claimReward();
+        lockRewardsContract.claimRewards();
         vm.expectRevert("Pausable: paused");
         vm.prank(user);
         lockRewardsContract.exit();

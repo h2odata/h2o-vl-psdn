@@ -245,7 +245,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     /**
      *  @notice User can receive its claimable rewards
      */
-    function claimReward()
+    function claimRewards()
         external
         nonReentrant
         whenNotPaused
