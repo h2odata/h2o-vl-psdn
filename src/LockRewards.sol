@@ -245,7 +245,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     /**
      *  @notice User can receive its claimable rewards
      */
-    function claimReward()
+    function claimRewards()
         external
         nonReentrant
         whenNotPaused
@@ -300,7 +300,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         updateReward(msg.sender)
         returns (uint256[] memory)
     {
-        _emergencyWithdraw(accounts[msg.sender].balance);
+        _emergencyUnlock();
         return _claim();
     }
 
@@ -653,14 +653,12 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     }
 
     /**
-     *  @notice Implements internal emergency withdraw logic
-     *  @dev The emergency withdraw is always done in name
+     *  @notice Implements internal emergency unlock logic
+     *  @dev The emergency unlock is always done in name
      * of caller for caller, it removes all further rewards.
-     *  @param amount: amount of tokens to withdraw
      */
 
-    function _emergencyWithdraw(uint256 amount) internal {
-        if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
+    function _emergencyUnlock() internal {
         if (accounts[msg.sender].lockStart + lockDuration * defaultEpochDurationInDays * 86400 * 2 > block.timestamp) {
             revert FundsInLockPeriod(accounts[msg.sender].balance);
         }
@@ -668,13 +666,6 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         uint256 current = currentEpoch;
         uint256 lockEpochs = accounts[msg.sender].lockEpochs;
         uint256 lastEpochPaid = accounts[msg.sender].lastEpochPaid;
-
-        // Solve edge case for first epoch
-        // since epochs starts on value 1
-        if (lastEpochPaid == 0) {
-            accounts[msg.sender].lastEpochPaid = 1;
-            ++lastEpochPaid;
-        }
 
         uint256 limit = lastEpochPaid + lockEpochs;
 
@@ -688,11 +679,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
 
         accounts[msg.sender].lockEpochs = 0;
 
-        totalAssets -= amount;
-        accounts[msg.sender].balance -= amount;
-
-        IERC20(lockToken).safeTransfer(msg.sender, amount);
-        emit Withdrawn(msg.sender, amount);
+        _withdraw(accounts[msg.sender].balance);
     }
 
     /**

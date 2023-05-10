@@ -28,8 +28,10 @@ interface ILockRewards {
     function deposit(uint256 amount) external;
     function redeposit(uint256 amount) external;
     function withdraw(uint256 amount) external;
-    function claimReward() external returns (uint256[] memory);
+    function claimRewards() external returns (uint256[] memory);
+    function claimReward(address reward) external returns (uint256);
     function exit() external returns (uint256[] memory);
+    function emergencyExit() external returns (uint256[] memory);
     function setNextEpoch(uint256[] calldata values) external;
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external;
     function changeRecoverWhitelist(address tokenAddress, bool flag) external;
