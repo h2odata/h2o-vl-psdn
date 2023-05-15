@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
+import "openzeppelin-contracts/governance/TimelockController.sol";
 import "../src/LockRewards.sol";
 
 uint256 constant LOCK_PERIOD = 3;
@@ -13,6 +14,7 @@ contract LockRewardsScript is Script {
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 delay = vm.envUint("TIMELOCK_DELAY");
         address lockToken = vm.envAddress("LOCK_ADDRESS");
         address reward1Token = vm.envAddress("REWARD1_ADDRESS");
         address reward2Token = vm.envAddress("REWARD2_ADDRESS");
@@ -22,13 +24,24 @@ contract LockRewardsScript is Script {
         tokens[0] = reward1Token;
         tokens[1] = reward2Token;
 
+        address[] memory proposers = new address[](1);
+        proposers[1] = ownerAddress;
+
+        address[] memory executors = new address[](1);
+        proposers[1] = ownerAddress;
+
+        TimelockController timeLock = new TimelockController(delay, proposers, executors, ownerAddress);
+
         LockRewards lockRewards = new LockRewards(
             lockToken,
             tokens,
             EPOCH_DURATION,
             LOCK_PERIOD,
+            address(timeLock),
+            ownerAddress,
             ownerAddress
         );
+
         vm.stopBroadcast();
     }
 }

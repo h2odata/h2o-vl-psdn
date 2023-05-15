@@ -37,6 +37,8 @@ contract LockRewardsTest is Test {
             tokens,
             EPOCH_DURATION,
             LOCK_PERIOD,
+            address(this),
+            address(this),
             address(this)
         );
         lockRewardsContract.grantRole(lockRewardsContract.EPOCH_SETTER_ROLE(), address(this));
@@ -1396,13 +1398,13 @@ contract LockRewardsTest is Test {
 
     /* Pause Tests */
     function testPauseShouldBeOnlyCallableByOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert();
         vm.prank(user);
         lockRewardsContract.pause();
     }
 
     function testUnpauseShouldBeOnlyCallableByOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert();
         vm.prank(user);
         lockRewardsContract.unpause();
     }

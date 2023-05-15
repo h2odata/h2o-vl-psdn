@@ -30,6 +30,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     using SafeERC20 for IERC20;
 
     bytes32 public constant EPOCH_SETTER_ROLE = keccak256("EPOCH_SETTER_ROLE");
+    bytes32 public constant PAUSE_SETTER_ROLE = keccak256("PAUSE_SETTER_ROLE");
 
     /// @dev Account hold all user information
     mapping(address => Account) public accounts;
@@ -67,12 +68,16 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         address[] memory _rewards,
         uint256 _defaultEpochDurationInDays,
         uint256 _lockDuration,
-        address _admin
+        address _admin,
+        address _epochSetter,
+        address _pauseSetter
     ) {
         lockToken = _lockToken;
         defaultEpochDurationInDays = _defaultEpochDurationInDays;
         lockDuration = _lockDuration;
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(EPOCH_SETTER_ROLE, _epochSetter);
+        _grantRole(PAUSE_SETTER_ROLE, _pauseSetter);
 
         for (uint256 i = 0; i < _rewards.length;) {
             _setReward(_rewards[i]);
@@ -310,7 +315,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      * @notice Pause contract. Can only be called by the contract owner.
      * @dev If contract is already paused, transaction will revert
      */
-    function pause() external onlyOwner {
+    function pause() external onlyRole(PAUSE_SETTER_ROLE) {
         _pause();
     }
 
@@ -318,7 +323,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      * @notice Unpause contract. Can only be called by the contract owner.
      * @dev If contract is already unpaused, transaction will revert
      */
-    function unpause() external onlyOwner {
+    function unpause() external onlyRole(PAUSE_SETTER_ROLE) {
         _unpause();
     }
 
