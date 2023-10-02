@@ -5,9 +5,11 @@ import "forge-std/Test.sol";
 import "openzeppelin-contracts/interfaces/IERC20.sol";
 import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
+import "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+import "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "../src/LockRewards.sol";
 import "../src/interfaces/ILockRewards.sol";
-
+import "forge-std/console.sol";
 uint256 constant DAY = 86400;
 uint256 constant LOCK_PERIOD = 1;
 uint256 constant EPOCH_DURATION = 7;
@@ -32,15 +34,22 @@ contract LockRewardsTest is Test {
         tokens[0] = REWARD1_ADDRESS;
         tokens[1] = REWARD2_ADDRESS;
 
-        lockRewardsContract = new LockRewards(
+        LockRewards implementation = new LockRewards();
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(implementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(LockRewards(address(0)).initialize.selector, 
             LOCK_ADDRESS,
             tokens,
             EPOCH_DURATION,
             LOCK_PERIOD,
             address(this),
             address(this),
-            address(this)
+            address(this))
         );
+        lockRewardsContract = LockRewards(address(proxy));
         lockRewardsContract.grantRole(lockRewardsContract.EPOCH_SETTER_ROLE(), address(this));
         lockRewards = address(lockRewardsContract);
         user = USER;
@@ -257,23 +266,24 @@ contract LockRewardsTest is Test {
     }
 
     function testSetLockDurationIntegration() public {
-        uint256 blockTime = block.timestamp;
+        uint256 blockTime = 0;
         uint256 reward1 = 1000e18;
         uint256 reward2 = 1e18;
         uint256[] memory values = new uint256[](2);
         values[0] = reward1;
         values[1] = reward2;
-        _transferRewards(3 * reward1, 3 * reward2);
+        _transferRewards(5 * reward1, 5 * reward2);
         uint256 deposit = 1e18;
+        vm.warp(blockTime);
 
+        lockRewardsContract.setNextEpoch(values);
         // Lock for next epoch
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
         // Change Lock duration to 3 epochs
         lockRewardsContract.setLockDuration(3);
-
         // Travel to end of 1st epoch
-        vm.warp(blockTime + _day(8));
+        vm.warp(blockTime + _day(15));
 
         uint256 balanceBefore = IERC20(LOCK_ADDRESS).balanceOf(user);
 
@@ -291,7 +301,7 @@ contract LockRewardsTest is Test {
         lockRewardsContract.setNextEpoch(values);
 
         // Travel to middle of 2nd epoch
-        vm.warp(blockTime + _day(15));
+        vm.warp(blockTime + _day(22));
 
         // User should not be able to withdraw deposit before updated number of epochs
         vm.prank(user);
@@ -308,6 +318,37 @@ contract LockRewardsTest is Test {
         lockRewardsContract.withdraw(deposit);
     }
 
+    function testWithdrawalWhenFirstEpochsIsAlreadyTakingPlace() public {
+        uint256 blockTime = block.timestamp;
+        uint256 reward1 = 1000e18;
+        uint256 reward2 = 1e18;
+        uint256[] memory values = new uint256[](2);
+        values[0] = reward1;
+        values[1] = reward2;
+        _transferRewards(3 * reward1, 3 * reward2);
+        uint256 deposit = 1e18;
+
+        // Lock for next epoch
+        lockRewardsContract.setNextEpoch(values);
+        lockRewardsContract.setNextEpoch(values);
+
+        // Travel to begginning of 1st epoch
+        vm.warp(blockTime + 3600);
+        _deposit(user, deposit);
+
+        // Travel to end of 2nd epoch
+        vm.warp(blockTime + _day(15));
+
+        uint256 balanceBefore = IERC20(LOCK_ADDRESS).balanceOf(user);
+
+        // User should be able to withdraw deposit (locked before lock duration change)
+        vm.prank(user);
+        lockRewardsContract.withdraw(deposit);
+
+        uint256 balanceAfter = IERC20(LOCK_ADDRESS).balanceOf(user);
+
+        assertEq(balanceAfter, balanceBefore + deposit);
+    }
     /* Set Reward Tests */
     function testSetRewardShouldBeCallableOnlyByOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");

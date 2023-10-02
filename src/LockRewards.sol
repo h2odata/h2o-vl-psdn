@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 
-import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-contracts/token/ERC721/IERC721.sol";
-import "openzeppelin-contracts/security/ReentrancyGuard.sol";
-import "openzeppelin-contracts/security/Pausable.sol";
-import "openzeppelin-contracts/access/Ownable.sol";
-import "openzeppelin-contracts/access/AccessControl.sol";
+import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
+import "openzeppelin-contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "openzeppelin-contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/security/PausableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "./interfaces/ILockRewards.sol";
 
@@ -26,7 +28,7 @@ import "./interfaces/ILockRewards.sol";
  * by the Ownable contract. The contract deployer is the owner at
  * start.
  */
-contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, AccessControl {
+contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant EPOCH_SETTER_ROLE = keccak256("EPOCH_SETTER_ROLE");
@@ -44,17 +46,21 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
     mapping(address => uint256) public rewardsPaid;
 
     /// @dev If false, allows users to withdraw their tokens before the locking end period
-    bool public enforceTime = true;
+    bool public enforceTime;
 
     /// @dev Hold all epoch information like rewards and balance locked for each user
     mapping(uint256 => Epoch) public epochs;
-    uint256 public currentEpoch = 1;
-    uint256 public nextUnsetEpoch = 1;
-    uint256 public defaultEpochDurationInDays = 7;
+    uint256 public currentEpoch;
+    uint256 public nextUnsetEpoch;
+    uint256 public defaultEpochDurationInDays;
     /// @dev In epochs;
-    uint256 public lockDuration = 16;
+    uint256 public lockDuration;
     /// @dev Contract owner can whitelist an ERC20 token and withdraw its funds
     mapping(address => bool) public whitelistRecoverERC20;
+
+    constructor() {
+       _disableInitializers();
+    }
 
     /**
      *  @dev Owner is the deployer
@@ -63,7 +69,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
      *  @param _defaultEpochDurationInDays: epoch duration in days
      *  @param _lockDuration: deposit duration in epochs
      */
-    constructor(
+    function initialize(
         address _lockToken,
         address[] memory _rewards,
         uint256 _defaultEpochDurationInDays,
@@ -71,7 +77,18 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
         address _admin,
         address _epochSetter,
         address _pauseSetter
-    ) {
+    ) public initializer {
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        __Ownable_init();
+        __AccessControl_init();
+
+        enforceTime = true;
+        currentEpoch = 1;
+        nextUnsetEpoch = 1;
+        defaultEpochDurationInDays = 7;
+        lockDuration = 16;
+
         lockToken = _lockToken;
         defaultEpochDurationInDays = _defaultEpochDurationInDays;
         lockDuration = _lockDuration;
@@ -807,7 +824,7 @@ contract LockRewards is ILockRewards, ReentrancyGuard, Ownable, Pausable, Access
 
         uint256 locks = 0;
 
-        uint256 limit = lastEpochPaid + lockEpochs;
+        uint256 limit = lastEpochPaid + lockEpochs + 1;
         if (limit > current) {
             limit = current;
         }
