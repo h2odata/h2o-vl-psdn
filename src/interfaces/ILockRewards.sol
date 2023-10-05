@@ -25,9 +25,9 @@ interface ILockRewards {
     function updateAccount()
         external
         returns (uint256 balance, uint256 lockEpochs, uint256 lastEpochPaid, uint256[] memory rewards);
-    function deposit(uint256 amount) external;
-    function redeposit(uint256 amount) external;
-    function withdraw(uint256 amount) external;
+    function deposit(uint128 amount) external;
+    function redeposit(uint128 amount) external;
+    function withdraw(uint128 amount) external;
     function claimRewards() external returns (uint256[] memory);
     function claimReward(address reward) external returns (uint256);
     function exit() external returns (uint256[] memory);
@@ -74,20 +74,19 @@ interface ILockRewards {
 
     // Structs
     struct Account {
-        uint256 balance;
-        uint256 lockStart;
-        uint256 lockEpochs;
-        uint256 lastEpochPaid;
+        uint128 balance;
+        uint64 lockStart;
+        uint64 lockEpochs;
+        uint64 lastEpochPaid;
         mapping(address => uint256) rewards;
         address[] rewardTokens;
         uint256 activeRewards;
     }
 
     struct Epoch {
-        mapping(address => uint256) balanceLocked;
-        uint256 start;
-        uint256 finish;
-        uint256 totalLocked;
+        uint64 start;
+        uint64 finish;
+        uint128 totalLocked;
         address[] tokens;
         uint256[] rewards;
         bool isSet;
