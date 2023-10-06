@@ -84,7 +84,7 @@ contract LockRewardsTest is Test {
 
     /* View Functions Tests */
     function testBalanceOfShouldBeTotalLockedByTheUser() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _deposit(user, deposit);
 
         uint256 balance = lockRewardsContract.balanceOf(user);
@@ -93,7 +93,7 @@ contract LockRewardsTest is Test {
     }
 
     function testBalanceOfInEpochShouldBeTotalLockedByTheUserInEpoch() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _deposit(user, deposit);
 
         uint256 balance = lockRewardsContract.balanceOfInEpoch(user, 1);
@@ -103,7 +103,7 @@ contract LockRewardsTest is Test {
     }
 
     function testTotalLockedShouldBeAllTokensLocked() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _deposit(user, deposit);
 
         uint256 balance = lockRewardsContract.totalLocked();
@@ -144,7 +144,7 @@ contract LockRewardsTest is Test {
         uint256[] memory values = new uint256[](2);
         values[0] = reward1;
         values[1] = reward2;
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _transferRewards(reward1, reward2);
         lockRewardsContract.setLockDuration(2);
 
@@ -173,7 +173,7 @@ contract LockRewardsTest is Test {
         uint256[] memory values = new uint256[](2);
         values[0] = reward1;
         values[1] = reward2;
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _transferRewards(reward1, reward2);
 
         _deposit(user, deposit);
@@ -197,7 +197,7 @@ contract LockRewardsTest is Test {
     }
 
     function testGetAccountShouldReturnInformationAboutAccount() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
 
@@ -232,8 +232,8 @@ contract LockRewardsTest is Test {
     }
 
     function testSetLockDurationShouldUpdateLockPeriod() public {
-        uint256 lockPeriod = lockRewardsContract.lockDuration();
-        uint256 newLockPeriod = 3;
+        uint64 lockPeriod = lockRewardsContract.lockDuration();
+        uint64 newLockPeriod = 3;
 
         assertEq(lockPeriod, LOCK_PERIOD);
 
@@ -242,10 +242,10 @@ contract LockRewardsTest is Test {
     }
 
     function testSetLockDurationShouldAffectFutureDeposits() public {
-        uint256 newLockPeriod = 3;
+        uint64 newLockPeriod = 3;
         lockRewardsContract.setLockDuration(newLockPeriod);
 
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _deposit(user, deposit);
 
         (, uint256 lockEpochs,,) = lockRewardsContract.getAccount(user);
@@ -254,10 +254,10 @@ contract LockRewardsTest is Test {
     }
 
     function testSetLockDurationShouldNotAffectPreviousDeposits() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         _deposit(user, deposit);
 
-        uint256 newLockPeriod = 3;
+        uint64 newLockPeriod = 3;
         lockRewardsContract.setLockDuration(newLockPeriod);
 
         (, uint256 lockEpochs,,) = lockRewardsContract.getAccount(user);
@@ -273,7 +273,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(5 * reward1, 5 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         vm.warp(blockTime);
 
         lockRewardsContract.setNextEpoch(values);
@@ -326,7 +326,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         lockRewardsContract.setNextEpoch(values);
@@ -390,7 +390,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -427,7 +427,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2, 3 * reward3);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -500,7 +500,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -533,7 +533,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -674,7 +674,7 @@ contract LockRewardsTest is Test {
 
     function testLockingShouldTransferFundsFromCaller() public {
         uint256 balance = IERC20(LOCK_ADDRESS).balanceOf(user);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         uint256 balanceAfterDeposit = IERC20(LOCK_ADDRESS).balanceOf(user);
@@ -683,7 +683,7 @@ contract LockRewardsTest is Test {
     }
 
     function testLockingShouldUpdateAccountBalanceInfo() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         vm.prank(user);
         uint256 balanceLocked = lockRewardsContract.getEpochBalanceLocked(1);
@@ -708,7 +708,7 @@ contract LockRewardsTest is Test {
     }
 
     function testRelockingShouldUpdateEpochsInfoAndTotalAssetsButNotLockEpochs() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         lockRewardsContract.setLockDuration(2);
 
         _deposit(user, deposit);
@@ -746,7 +746,7 @@ contract LockRewardsTest is Test {
         uint256[] memory values = new uint256[](2);
         values[0] = reward1;
         values[1] = reward2;
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -792,7 +792,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -829,7 +829,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -891,7 +891,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -921,7 +921,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next epoch
         _deposit(user, deposit);
@@ -951,7 +951,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Set second epoch. It will start automatically.
         lockRewardsContract.setNextEpoch(values);
@@ -1005,7 +1005,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next 3 epochs
         lockRewardsContract.setLockDuration(3);
@@ -1046,7 +1046,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user2, deposit);
         _deposit(user, deposit * 2);
@@ -1091,7 +1091,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1109,7 +1109,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1129,7 +1129,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1154,7 +1154,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1190,7 +1190,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next 3 epochs
         lockRewardsContract.setLockDuration(3);
@@ -1226,7 +1226,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next 3 epochs
         lockRewardsContract.setLockDuration(3);
@@ -1273,7 +1273,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         // Lock for next 3 epochs
         lockRewardsContract.setLockDuration(3);
@@ -1311,7 +1311,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1340,7 +1340,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         lockRewardsContract.setLockDuration(7);
 
         _deposit(user, deposit);
@@ -1396,7 +1396,7 @@ contract LockRewardsTest is Test {
         values[0] = reward1;
         values[1] = reward2;
         _transferRewards(3 * reward1, 3 * reward2);
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
 
         _deposit(user, deposit);
         lockRewardsContract.setNextEpoch(values);
@@ -1469,7 +1469,7 @@ contract LockRewardsTest is Test {
     }
 
     function testPauseShouldSetContractToPauseMode() public {
-        uint256 deposit = 1e18;
+        uint128 deposit = 1e18;
         lockRewardsContract.pause();
 
         bool paused = lockRewardsContract.paused();
@@ -1496,14 +1496,14 @@ contract LockRewardsTest is Test {
         return DAY * amount;
     }
 
-    function _deposit(address to, uint256 value) internal {
+    function _deposit(address to, uint128 value) internal {
         vm.startPrank(to);
         IERC20(LOCK_ADDRESS).approve(lockRewards, value);
         lockRewardsContract.deposit(value);
         vm.stopPrank();
     }
 
-    function _redeposit(address to, uint256 value) internal {
+    function _redeposit(address to, uint128 value) internal {
         vm.startPrank(to);
         IERC20(LOCK_ADDRESS).approve(lockRewards, value);
         lockRewardsContract.redeposit(value);

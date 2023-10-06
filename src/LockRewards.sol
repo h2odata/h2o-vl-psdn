@@ -50,11 +50,12 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
 
     /// @dev Hold all epoch information like rewards and balance locked for each user
     mapping(uint256 => Epoch) public epochs;
-    uint256 public currentEpoch;
-    uint256 public nextUnsetEpoch;
-    uint256 public defaultEpochDurationInDays;
+    mapping(uint256 => mapping(address => uint128[2])) epochsBalanceLocked;
+    uint64 public currentEpoch;
+    uint64 public nextUnsetEpoch;
+    uint64 public defaultEpochDurationInDays;
     /// @dev In epochs;
-    uint256 public lockDuration;
+    uint64 public lockDuration;
     /// @dev Contract owner can whitelist an ERC20 token and withdraw its funds
     mapping(address => bool) public whitelistRecoverERC20;
 
@@ -72,8 +73,8 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
     function initialize(
         address _lockToken,
         address[] memory _rewards,
-        uint256 _defaultEpochDurationInDays,
-        uint256 _lockDuration,
+        uint64 _defaultEpochDurationInDays,
+        uint64 _lockDuration,
         address _admin,
         address _epochSetter,
         address _pauseSetter
@@ -124,7 +125,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @return balance: total of tokens locked for an epoch
      */
     function balanceOfInEpoch(address owner, uint256 epochId) external view returns (uint256) {
-        return epochs[epochId].balanceLocked[owner];
+        return epochsBalanceLocked[epochId / 2][owner][epochId % 2];
     }
 
     /**
@@ -240,7 +241,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      * current one if setted by the owner.
      *  @param amount: the amount of lock tokens to deposit
      */
-    function deposit(uint256 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
+    function deposit(uint128 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
         _deposit(amount, lockDuration);
     }
 
@@ -248,7 +249,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @notice Redeposit increases user deposit without increasing epochs locked
      *  @param amount: the amount of lock tokens to deposit
      */
-    function redeposit(uint256 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
+    function redeposit(uint128 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
         if (accounts[msg.sender].balance == 0) {
             revert InsufficientDeposit();
         }
@@ -260,7 +261,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @notice Allows withdraw after lockEpochs is zero
      *  @param amount: tokens to caller receive
      */
-    function withdraw(uint256 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
+    function withdraw(uint128 amount) external nonReentrant whenNotPaused updateEpoch updateReward(msg.sender) {
         _withdraw(amount);
     }
 
@@ -349,7 +350,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      * @dev If same lock period is already set transaction will revert
      * @param duration: number of epochs that deposit will lock for
      */
-    function setLockDuration(uint256 duration) external onlyOwner updateEpoch {
+    function setLockDuration(uint64 duration) external onlyOwner updateEpoch {
         if (duration == lockDuration) {
             revert IncorrectLockDuration();
         }
@@ -415,7 +416,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         if (values.length != rewardTokens.length) {
             revert IncorrectRewards(values.length, rewardTokens.length);
         }
-        _setEpoch(values, defaultEpochDurationInDays, block.timestamp);
+        _setEpoch(values, defaultEpochDurationInDays, uint64(block.timestamp));
     }
 
     /**
@@ -430,7 +431,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      * in days
      *  @param epochStart: the epoch start date in unix epoch (seconds)
      */
-    function setNextEpoch(uint256[] calldata values, uint256 epochDurationInDays, uint256 epochStart)
+    function setNextEpoch(uint256[] calldata values, uint64 epochDurationInDays, uint64 epochStart)
         external
         onlyRole(EPOCH_SETTER_ROLE)
         updateEpoch
@@ -453,7 +454,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @param epochDurationInDays: how long the epoch will last
      * in days
      */
-    function setNextEpoch(uint256[] calldata values, uint256 epochDurationInDays)
+    function setNextEpoch(uint256[] calldata values, uint64 epochDurationInDays)
         external
         onlyRole(EPOCH_SETTER_ROLE)
         updateEpoch
@@ -461,7 +462,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         if (values.length != rewardTokens.length) {
             revert IncorrectRewards(values.length, rewardTokens.length);
         }
-        _setEpoch(values, epochDurationInDays, block.timestamp);
+        _setEpoch(values, epochDurationInDays, uint64(block.timestamp));
     }
 
     /**
@@ -527,7 +528,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @notice Allows owner to change for how long user has to lock their deposit
      *  @param duration: new value for lockDuration
      */
-    function _setLockDuration(uint256 duration) internal {
+    function _setLockDuration(uint64 duration) internal {
         lockDuration = duration;
         emit SetLockDuration(duration);
     }
@@ -563,7 +564,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      * in days
      *  @param epochStart: the epoch start date in unix epoch (seconds)
      */
-    function _setEpoch(uint256[] calldata values, uint256 epochDurationInDays, uint256 epochStart) internal {
+    function _setEpoch(uint256[] calldata values, uint64 epochDurationInDays, uint64 epochStart) internal {
         if (nextUnsetEpoch - currentEpoch > 1) {
             revert EpochMaxReached(2);
         }
@@ -598,8 +599,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         } else {
             epochs[next].start = epochs[next - 1].finish + 1;
         }
-        epochs[next].finish = epochs[next].start + epochDurationInDays * 86400; // Seconds in a day
-
+        epochs[next].finish = epochs[next].start + epochDurationInDays * 86400; // Seconds in a 
         epochs[next].tokens = epochTokens;
         epochs[next].rewards = epochRewards;
         epochs[next].isSet = true;
@@ -614,13 +614,13 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @param amount: the amount of lock tokens to deposit
      *  @param lock: how many epochs to lock
      */
-    function _deposit(uint256 amount, uint256 lock) internal {
+    function _deposit(uint128 amount, uint64 lock) internal {
         IERC20 lToken = IERC20(lockToken);
 
         uint256 oldLockEpochs = accounts[msg.sender].lockEpochs;
         // Increase lockEpochs for user
         accounts[msg.sender].lockEpochs += lock;
-        accounts[msg.sender].lockStart = block.timestamp;
+        accounts[msg.sender].lockStart = uint64(block.timestamp);
 
         // This is done to save gas in case of a relock
         // Also, emits a different event for deposit or relock
@@ -647,10 +647,10 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         } else {
             lockBoundary = accounts[msg.sender].lockEpochs - 1;
         }
-        uint256 newBalance = accounts[msg.sender].balance;
+        uint128 newBalance = accounts[msg.sender].balance;
         for (uint256 i = 0; i < lockBoundary;) {
-            epochs[i + next].totalLocked += newBalance - epochs[i + next].balanceLocked[msg.sender];
-            epochs[i + next].balanceLocked[msg.sender] = newBalance;
+            epochs[i + next].totalLocked += newBalance - epochsBalanceLocked[(i + next) / 2][msg.sender][(i + next) % 2];
+            epochsBalanceLocked[(i + next) / 2][msg.sender][(i + next) % 2] = newBalance;
 
             unchecked {
                 ++i;
@@ -664,7 +664,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      * of caller for caller
      *  @param amount: amount of tokens to withdraw
      */
-    function _withdraw(uint256 amount) internal {
+    function _withdraw(uint128 amount) internal {
         if (amount == 0 || accounts[msg.sender].balance < amount) revert InsufficientAmount();
         if (accounts[msg.sender].lockEpochs > 0 && enforceTime) revert FundsInLockPeriod(accounts[msg.sender].balance);
         totalAssets -= amount;
@@ -692,8 +692,8 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         uint256 limit = lastEpochPaid + lockEpochs;
 
         for (uint256 i = lastEpochPaid; i < limit;) {
-            epochs[i].totalLocked -= epochs[i].balanceLocked[msg.sender];
-            epochs[i].balanceLocked[msg.sender] = 0;
+            epochs[i].totalLocked -= epochsBalanceLocked[i / 2][msg.sender][i % 2];
+            epochsBalanceLocked[i / 2][msg.sender][i % 2] = 0;
             unchecked {
                 ++i;
             }
@@ -795,13 +795,13 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
      *  @param epochId: the number of the epoch
      */
     function _getEpochBalanceLocked(uint256 epochId) internal view returns (uint256 balanceLocked) {
-        return (epochs[epochId].balanceLocked[msg.sender]);
+        return (epochsBalanceLocked[epochId / 2][msg.sender][epochId % 2]);
     }
 
     /* ========== MODIFIERS ========== */
 
     modifier updateEpoch() {
-        uint256 current = currentEpoch;
+        uint64 current = currentEpoch;
 
         while (epochs[current].finish <= block.timestamp && epochs[current].isSet == true) {
             current++;
@@ -811,7 +811,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
     }
 
     modifier updateReward(address owner) {
-        uint256 current = currentEpoch;
+        uint64 current = currentEpoch;
         uint256 lockEpochs = accounts[owner].lockEpochs;
         uint256 lastEpochPaid = accounts[owner].lastEpochPaid;
 
@@ -822,7 +822,7 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
             ++lastEpochPaid;
         }
 
-        uint256 locks = 0;
+        uint64 locks = 0;
 
         uint256 limit = lastEpochPaid + lockEpochs + 1;
         if (limit > current) {
@@ -830,14 +830,14 @@ contract LockRewards is ILockRewards, ReentrancyGuardUpgradeable, OwnableUpgrade
         }
 
         for (uint256 i = lastEpochPaid; i < limit;) {
-            if (epochs[i].balanceLocked[owner] == 0) {
+            if (epochsBalanceLocked[i / 2][owner][i % 2] == 0) {
                 unchecked {
                     ++i;
                 }
                 continue;
             }
 
-            uint256 share = epochs[i].balanceLocked[owner] * 1e18 / epochs[i].totalLocked;
+            uint256 share = epochsBalanceLocked[i / 2][owner][i % 2] * 1e18 / epochs[i].totalLocked;
 
             for (uint256 j = 0; j < epochs[i].rewards.length;) {
                 uint256 shareValue = share * epochs[i].rewards[j] / 1e18;

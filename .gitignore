@@ -23,3 +23,6 @@ docs/
 # Npm package files
 pkg
 typings
+
+report
+broadcast
