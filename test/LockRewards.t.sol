@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "openzeppelin-contracts/interfaces/IERC20.sol";
 import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
+import "openzeppelin-contracts/token/ERC721/ERC721.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
 import "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
 import "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -21,7 +22,7 @@ address constant REWARD3_ADDRESS = address(0xdAC17F958D2ee523a2206206994597C13D8
 address constant USER = address(0xf8e0C93Fd48B4C34A4194d3AF436b13032E641F3);
 address constant USER2 = address(0xdb36b23964FAB32dCa717c99D6AEFC9FB5748f3a);
 
-contract LockRewardsTest is Test {
+contract LockRewardsTestBase is Test {
     using SafeERC20 for IERC20;
 
     LockRewards public lockRewardsContract;
@@ -29,9 +30,9 @@ contract LockRewardsTest is Test {
     address public user;
     address public user2;
 
-    function setUp() public {
+    function setUpBase(address reward1) public {
         address[] memory tokens = new address[](2);
-        tokens[0] = REWARD1_ADDRESS;
+        tokens[0] = reward1;
         tokens[1] = REWARD2_ADDRESS;
 
         LockRewards implementation = new LockRewards();
@@ -59,6 +60,13 @@ contract LockRewardsTest is Test {
         deal(user, 1000 ether);
         deal(LOCK_ADDRESS, user, 100e18);
         deal(LOCK_ADDRESS, user2, 100e18);
+    }
+}
+
+contract LockRewardsTest is Test, LockRewardsTestBase {
+
+    function setUp() public {
+        setUpBase(REWARD1_ADDRESS);
     }
 
     /* Constructor Tests*/
@@ -1518,5 +1526,93 @@ contract LockRewardsTest is Test {
     function _transferRewards(uint256 reward1, uint256 reward2, uint256 reward3) internal {
         _transferRewards(reward1, reward2);
         deal(REWARD3_ADDRESS, lockRewards, reward3);
+    }
+}
+
+contract LockRewards_changeRecoverWhitelistTest is Test, LockRewardsTestBase {
+    
+    address public requestedAddress;
+
+
+    function setUp() public {
+        setUpBase(address(1));
+    }
+
+    function subject() internal {
+        return lockRewardsContract.changeRecoverWhitelist(requestedAddress, true);
+    }
+
+    function testWhenPassedLockTokenAddress_shouldRevert() public {
+        requestedAddress = LOCK_ADDRESS;
+        vm.expectRevert(abi.encodeWithSelector(ILockRewards.CannotWhitelistLockedToken.selector, LOCK_ADDRESS));
+        subject();
+    }
+
+    function testWhenPassedRewardTokenAddress_shouldRevert() public {
+        requestedAddress = address(1);
+        vm.expectRevert(abi.encodeWithSelector(ILockRewards.CannotWhitelistGovernanceToken.selector, address(1)));
+        subject();
+    }
+
+    event ChangeERC20Whiltelist(address token, bool tokenState);
+    function testWhenPassedOtherAddress_shouldSetWhitelistToRequestedValue() public {
+        requestedAddress = address(2);
+        vm.expectEmit(false, false, false, true, address(lockRewardsContract));
+        emit ChangeERC20Whiltelist(requestedAddress, true);
+        subject();
+        assertEq(lockRewardsContract.whitelistRecoverERC20(requestedAddress), true); 
+    }
+}
+
+
+contract MockERC721 is ERC721 {
+    constructor () ERC721("Test", "Test") {}
+
+    function mint(address to, uint256 id) public {
+        _mint(to, id);
+    }
+}
+
+contract LockRewards_recoverERC721Test is Test, LockRewardsTestBase {
+    
+    MockERC721 public mockNft;
+
+
+    function setUp() public {
+        setUpBase(REWARD1_ADDRESS);
+        mockNft = new MockERC721();
+        mockNft.mint(address(lockRewardsContract), 1);
+    }
+
+    function subject() internal {
+        return lockRewardsContract.recoverERC721(address(mockNft), 1);
+    }
+    
+    event RecoveredERC721(address token, uint256 tokenId);
+    function testWhenPassedAddress_shouldCallTransferFromOnNft() public {
+        vm.expectCall(address(mockNft), abi.encodeCall(mockNft.transferFrom, (address(lockRewardsContract), address(this), uint256(1)))
+        );
+        vm.expectEmit(false, false, false, true, address(lockRewardsContract));
+        emit RecoveredERC721(address(mockNft), 1);
+        subject();
+    }
+}
+
+contract LockRewards_changeEnforceTimeTest is Test, LockRewardsTestBase {
+    
+    function setUp() public {
+        setUpBase(REWARD1_ADDRESS);
+    }
+
+    function subject() internal {
+        return lockRewardsContract.changeEnforceTime(true);
+    }
+    
+    event ChangeEnforceTime(bool flag);
+    function testWhenPassedTrue_shouldSetEnforceTimeToTrue() public {
+        vm.expectEmit(false, false, false, true, address(lockRewardsContract));
+        emit ChangeEnforceTime(true);
+        subject();
+        assertEq(lockRewardsContract.enforceTime(), true);
     }
 }
